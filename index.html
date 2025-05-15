@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conway's Game of Life</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1a1a;
+            color: #00ff00;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            overflow-x: hidden;
+        }
+        .game-container {
+            background-color: #0d0d0d;
+            border: 2px solid #00ff00;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 0 15px #00ff00;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 1rem; 
+        }
+        canvas#gameCanvas { /* Specific ID for main canvas */
+            display: block;
+            background-color: #000;
+            border: 1px solid #00cc00;
+            border-radius: 0.25rem;
+            width: 100%;
+            height: auto;
+            max-height: 50vh; /* Adjusted for more space */
+            image-rendering: pixelated;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .btn {
+            background-color: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 0.6rem 1rem; /* Slightly smaller buttons */
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-family: 'Press Start 2P', cursive;
+            text-transform: uppercase;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 255, 0, 0.3);
+            font-size: 0.75rem; /* Smaller font for buttons */
+        }
+        .btn:hover, .btn:focus {
+            background-color: #005500;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        .btn:active {
+            background-color: #007700;
+        }
+        .btn:disabled {
+            background-color: #002200;
+            color: #006600;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .stats-display {
+            font-size: 0.7rem; /* Adjusted font size */
+            text-align: center;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #00cc00;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.3rem; /* Smaller gap */
+        }
+        .stats-display span {
+             padding: 0.2rem 0.4rem; /* Smaller padding */
+             background-color: #002200;
+             border-radius: 0.25rem;
+        }
+        .info-text {
+            font-size: 0.75rem; /* Adjusted font size */
+            text-align: center;
+            margin-top: 0.5rem;
+            color: #00cc00;
+        }
+        .settings {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem; /* Smaller gap */
+            margin-bottom: 0.8rem; /* Adjusted margin */
+        }
+        .settings label {
+            font-size: 0.8rem; /* Adjusted font size */
+        }
+        .settings input[type="range"], .settings input[type="number"] {
+            background-color: #002200;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 0.2rem; /* Smaller padding */
+            border-radius: 0.25rem;
+            width: 130px; /* Adjusted width */
+        }
+        .settings input[type="number"] {
+            width: 70px; /* Adjusted width */
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 0.8rem;
+            border-radius: 0.25rem;
+            box-shadow: 0 0 10px #00ff00;
+            z-index: 1000;
+            display: none;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        .message-box button {
+            background-color: #005500;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 0.4rem 0.8rem;
+            margin-top: 0.4rem;
+            cursor: pointer;
+            border-radius: 0.25rem;
+        }
+
+        /* Game History Section */
+        .history-container {
+            background-color: #0d0d0d;
+            border: 2px solid #00ff00;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 0 10px #00ff00;
+            width: 100%;
+            max-width: 800px;
+            margin-top: 1rem;
+        }
+        .history-container h2 {
+            font-size: 1.1rem; /* Adjusted font size */
+            text-align: center;
+            margin-bottom: 0.6rem;
+        }
+        #gameHistoryList {
+            list-style: none;
+            padding: 0;
+            max-height: 250px; 
+            overflow-y: auto;
+            border: 1px solid #003300;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); /* Grid layout for thumbnails */
+            gap: 0.5rem;
+        }
+        #gameHistoryList li {
+            background-color: #001a00;
+            border: 1px solid #004d00;
+            padding: 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.6rem; /* Smaller font for less prominent text */
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        #gameHistoryList li:hover {
+            background-color: #002f00;
+        }
+        .history-thumbnail-container {
+            position: relative;
+            width: 100px; 
+            height: 60px;  
+            background-color: #000; 
+            margin-bottom: 3px; 
+            border: 1px solid #004d00;
+        }
+        .history-thumbnail-canvas { 
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+        .history-thumbnail-stats-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 10, 0, 0.65); 
+            color: #00ff00;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 0.7em; 
+            padding: 1px;
+            box-sizing: border-box;
+            pointer-events: none; 
+            line-height: 1.2;
+        }
+        #gameHistoryList li .history-timestamp {
+            margin-top: 3px;
+            font-size: 0.55rem; /* Even smaller for timestamp */
+            color: #00aa00;
+        }
+         #clearHistoryButton {
+            display: block;
+            margin: 0.75rem auto 0;
+        }
+
+        @media (max-width: 600px) {
+            .btn { padding: 0.5rem 0.75rem; font-size: 0.7rem; }
+            .settings label, .settings input { font-size: 0.75rem; }
+            .game-container, .history-container { padding: 0.5rem; }
+            canvas#gameCanvas { max-height: 40vh; }
+            .stats-display { font-size: 0.6rem; gap: 0.2rem; }
+            .stats-display span { padding: 0.15rem 0.3rem; }
+            .history-container h2 { font-size: 1rem; }
+            #gameHistoryList { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.3rem; max-height: 200px;}
+            #gameHistoryList li { padding: 0.3rem; }
+            .history-thumbnail-container { width: 80px; height: 48px; }
+            .history-thumbnail-stats-overlay { font-size: 0.6em; }
+            #gameHistoryList li .history-timestamp { font-size: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="text-2xl sm:text-3xl font-bold text-center my-2 sm:my-4">Conway's Game of Life</h1>
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="settings mt-3">
+            <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                <label for="cellSize">Cell Size:</label>
+                <input type="range" id="cellSize" name="cellSize" min="5" max="25" value="10">
+                <span id="cellSizeValue" class="w-10 text-xs">10px</span>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-1">
+                <label for="speed">Speed (ms):</label>
+                <input type="range" id="speed" name="speed" min="10" max="1000" value="200" step="10">
+                <span id="speedValue" class="w-12 text-xs">200ms</span>
+            </div>
+             <div class="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mt-1">
+                <label for="density">Density (%):</label>
+                <input type="range" id="density" name="density" min="10" max="90" value="30" step="5">
+                <span id="densityValue" class="w-10 text-xs">30%</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startButton" class="btn">Start</button>
+            <button id="stopButton" class="btn">Stop</button>
+            <button id="stepButton" class="btn">Step</button>
+            <button id="skipToEndButton" class="btn">Skip</button> <button id="randomizeButton" class="btn">Rand</button> <button id="resetButton" class="btn">Reset</button>
+        </div>
+
+        <div class="stats-display">
+            <span id="generationDisplay">Gen: 0</span>
+            <span id="totalCellsCreatedDisplay">Born: 0</span>
+            <span id="avgLifespanDisplay">Avg.Life: N/A</span>
+        </div>
+        <p class="info-text">Click cells to toggle when paused.</p>
+    </div>
+
+    <div class="history-container">
+        <h2>Game History</h2>
+        <ul id="gameHistoryList"></ul>
+        <button id="clearHistoryButton" class="btn">Clear History</button>
+    </div>
+
+    <div id="messageBox" class="message-box">
+        <p id="messageText"></p>
+        <button id="messageOkButton">OK</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const resetButton = document.getElementById('resetButton');
+        const randomizeButton = document.getElementById('randomizeButton');
+        const stepButton = document.getElementById('stepButton');
+        const skipToEndButton = document.getElementById('skipToEndButton');
+        const cellSizeSlider = document.getElementById('cellSize');
+        const cellSizeValueDisplay = document.getElementById('cellSizeValue');
+        const speedSlider = document.getElementById('speed');
+        const speedValueDisplay = document.getElementById('speedValue');
+        const densitySlider = document.getElementById('density');
+        const densityValueDisplay = document.getElementById('densityValue');
+        
+        const generationDisplay = document.getElementById('generationDisplay');
+        const totalCellsCreatedDisplay = document.getElementById('totalCellsCreatedDisplay');
+        const avgLifespanDisplay = document.getElementById('avgLifespanDisplay');
+
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const messageOkButton = document.getElementById('messageOkButton');
+
+        const gameHistoryList = document.getElementById('gameHistoryList');
+        const clearHistoryButton = document.getElementById('clearHistoryButton');
+
+        let cellSize = parseInt(cellSizeSlider.value);
+        let numCols, numRows;
+        let grid;
+        let birthGenerationGrid; 
+        let animationId = null;
+        let gameSpeed = parseInt(speedSlider.value);
+        let initialDensity = parseInt(densitySlider.value) / 100;
+
+        let generationCount = 0;
+        let historyGrids = []; 
+        const HISTORY_LENGTH = 5; 
+        const MAX_SKIP_GENERATIONS = 5000; // Reduced for faster skip in general
+
+        let totalCellsCreated = 0;
+        let totalLifespanSum = 0;
+        let totalCellsDied = 0;
+
+        // Variables to store the initial state of the current game for history saving
+        let currentInitialGrid = null;
+        let currentInitialNumCols = 0;
+        let currentInitialNumRows = 0;
+        let currentInitialCellSize = 0;
+
+        let gameHistoryLog = [];
+        const GAME_HISTORY_STORAGE_KEY = 'conwaysGameHistory_v2'; // New key for new structure
+
+        function showMessage(message) {
+            messageText.innerHTML = message; 
+            messageBox.style.display = 'block';
+        }
+        messageOkButton.addEventListener('click', () => { messageBox.style.display = 'none'; });
+        
+        function updateStatsDisplay() {
+            generationDisplay.textContent = `Gen: ${generationCount}`;
+            totalCellsCreatedDisplay.textContent = `Born: ${totalCellsCreated}`;
+            avgLifespanDisplay.textContent = `Avg.Life: ${totalCellsDied > 0 ? (totalLifespanSum / totalCellsDied).toFixed(1) : 'N/A'}`;
+        }
+
+        function resetCurrentGameStats() { // Renamed for clarity
+            generationCount = 0;
+            historyGrids = []; // Oscillation detection history
+            totalCellsCreated = 0;
+            totalLifespanSum = 0;
+            totalCellsDied = 0;
+            if (numCols && numRows) { // Ensure dimensions are set
+                 birthGenerationGrid = new Array(numCols).fill(null)
+                    .map(() => new Array(numRows).fill(0));
+            } else { // Fallback if dimensions aren't ready (should be rare)
+                birthGenerationGrid = [];
+            }
+            updateStatsDisplay();
+        }
+
+        // Captures the current grid state as the initial state for a potential history entry
+        function captureInitialState() {
+            if (grid && numCols > 0 && numRows > 0) {
+                currentInitialGrid = JSON.parse(JSON.stringify(grid));
+                currentInitialNumCols = numCols;
+                currentInitialNumRows = numRows;
+                currentInitialCellSize = cellSize;
+            } else { // Safety net, though should ideally not be hit if logic is correct
+                currentInitialGrid = null; 
+            }
+        }
+
+        function createAndInitializeGrids(cols, rows) {
+            numCols = cols;
+            numRows = rows;
+            grid = new Array(numCols).fill(null).map(() => new Array(numRows).fill(0));
+            birthGenerationGrid = new Array(numCols).fill(null).map(() => new Array(numRows).fill(0));
+        }
+
+        function randomizeGrid() {
+            stopGame(); 
+            setupCanvas(); // Determine new numCols/Rows based on current cellSize
+            createAndInitializeGrids(numCols, numRows); 
+            resetCurrentGameStats(); 
+            for (let col = 0; col < numCols; col++) {
+                for (let row = 0; row < numRows; row++) {
+                    if (Math.random() < initialDensity) grid[col][row] = 1;
+                }
+            }
+            captureInitialState(); // Capture this new random grid as the initial state
+            drawGrid();
+            updateStatsDisplay(); 
+            setPausedButtonState();
+        }
+
+        function resetGrid() {
+            stopGame(); 
+            setupCanvas(); // Potentially re-evaluate numCols/Rows if cellSize changed
+            createAndInitializeGrids(numCols, numRows); 
+            resetCurrentGameStats(); 
+            captureInitialState(); // Capture the empty grid as the initial state
+            drawGrid();
+            updateStatsDisplay(); 
+            setPausedButtonState();
+        }
+        
+        function setPausedButtonState() {
+            startButton.disabled = false;
+            startButton.textContent = "Start"; // Sets text to "Start"
+            stopButton.disabled = true;
+            stepButton.disabled = false;
+            skipToEndButton.disabled = false;
+            randomizeButton.disabled = false;
+            resetButton.disabled = false;
+        }
+
+        function setRunningButtonState() {
+            startButton.textContent = "Running..."; // Sets text to "Running..."
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            stepButton.disabled = true;
+            skipToEndButton.disabled = true; 
+            randomizeButton.disabled = true; 
+            resetButton.disabled = true;
+        }
+
+
+        function drawGrid() {
+            if (!grid || !ctx) return; 
+            ctx.fillStyle = '#000'; // Black background for canvas
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let col = 0; col < numCols; col++) {
+                for (let row = 0; row < numRows; row++) {
+                    if (grid[col][row]) {
+                        ctx.fillStyle = '#00ff00'; // Green for live cells
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize -1, cellSize -1); // -1 for grid line effect
+                    }
+                }
+            }
+        }
+
+        function countNeighbors(col, row) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const c = (col + i + numCols) % numCols;
+                    const r = (row + j + numRows) % numRows;
+                    if (grid[c] && grid[c][r] !== undefined) count += grid[c][r];
+                }
+            }
+            return count;
+        }
+        
+        function areGridsIdentical(g1, g2) {
+            if (!g1 || !g2 || g1.length !== g2.length || g1[0].length !== g2[0].length) return false;
+            for (let i = 0; i < g1.length; i++) {
+                for (let j = 0; j < g1[0].length; j++) {
+                    if (g1[i][j] !== g2[i][j]) return false;
+                }
+            }
+            return true;
+        }
+
+        function loadGameHistory() {
+            const storedHistory = localStorage.getItem(GAME_HISTORY_STORAGE_KEY);
+            gameHistoryLog = storedHistory ? JSON.parse(storedHistory) : [];
+            renderGameHistory();
+        }
+
+        function saveGameHistory() {
+            localStorage.setItem(GAME_HISTORY_STORAGE_KEY, JSON.stringify(gameHistoryLog));
+        }
+
+        function addGameToHistory(reason) {
+            if (!currentInitialGrid) { // Don't save if there's no valid initial state captured
+                console.warn("Attempted to save game to history without a valid initial state.");
+                return;
+            }
+            const summary = {
+                reason,
+                generations: generationCount,
+                cellsCreated: totalCellsCreated,
+                avgLifespan: totalCellsDied > 0 ? (totalLifespanSum / totalCellsDied).toFixed(1) : 'N/A',
+                timestamp: new Date().toLocaleString(),
+                initialGrid: currentInitialGrid, // Save the captured initial state
+                initialNumCols: currentInitialNumCols,
+                initialNumRows: currentInitialNumRows,
+                initialCellSize: currentInitialCellSize
+            };
+            gameHistoryLog.unshift(summary); 
+            if (gameHistoryLog.length > 20) gameHistoryLog.pop();
+            saveGameHistory();
+            renderGameHistory();
+        }
+        
+        function drawThumbnail(thumbCanvas, initialGrid, numC, numR) {
+            if (!initialGrid || !thumbCanvas) return;
+            const thumbCtx = thumbCanvas.getContext('2d');
+            thumbCtx.fillStyle = '#000000'; // Black background for thumbnail
+            thumbCtx.fillRect(0, 0, thumbCanvas.width, thumbCanvas.height);
+
+            if (numC === 0 || numR === 0) return; // Avoid division by zero
+
+            const cellW = thumbCanvas.width / numC;
+            const cellH = thumbCanvas.height / numR;
+            thumbCtx.fillStyle = '#00cc00'; // Slightly darker green for thumbnail cells
+
+            for (let c = 0; c < numC; c++) {
+                for (let r = 0; r < numR; r++) {
+                    if (initialGrid[c] && initialGrid[c][r]) { // Check if col exists
+                        thumbCtx.fillRect(c * cellW, r * cellH, cellW, cellH);
+                    }
+                }
+            }
+        }
+
+        function renderGameHistory() {
+            gameHistoryList.innerHTML = ''; 
+            if (gameHistoryLog.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = "No games recorded.";
+                li.style.textAlign = "center";
+                li.style.gridColumn = "1 / -1"; // Span all columns if grid
+                gameHistoryList.appendChild(li);
+                return;
+            }
+            gameHistoryLog.forEach((game, index) => {
+                const li = document.createElement('li');
+                
+                const thumbContainer = document.createElement('div');
+                thumbContainer.className = 'history-thumbnail-container';
+                
+                const thumbCanvas = document.createElement('canvas');
+                thumbCanvas.className = 'history-thumbnail-canvas';
+                thumbCanvas.width = 100; // Intrinsic size for drawing
+                thumbCanvas.height = 60;  // Intrinsic size for drawing
+                
+                const statsOverlay = document.createElement('div');
+                statsOverlay.className = 'history-thumbnail-stats-overlay';
+                statsOverlay.innerHTML = `Gen: ${game.generations}<br>Born: ${game.cellsCreated}<br>Avg.Life: ${game.avgLifespan}`;
+                
+                thumbContainer.appendChild(thumbCanvas);
+                thumbContainer.appendChild(statsOverlay);
+                li.appendChild(thumbContainer);
+
+                const timestampText = document.createElement('div');
+                timestampText.className = 'history-timestamp';
+                timestampText.textContent = `${game.timestamp.split(',')[0]} (${game.reason.substring(0,15)})`; // Shorter reason
+                li.appendChild(timestampText);
+                
+                li.addEventListener('click', () => loadGameFromHistory(index));
+                gameHistoryList.appendChild(li);
+
+                // Draw after appending, ensuring canvas is in DOM (though not strictly necessary for offscreen)
+                // Defer drawing slightly to ensure layout if needed, or draw directly
+                setTimeout(() => drawThumbnail(thumbCanvas, game.initialGrid, game.initialNumCols, game.initialNumRows), 0);
+            });
+        }
+
+        clearHistoryButton.addEventListener('click', () => {
+            if (confirm("Clear all game history? This cannot be undone.")) {
+                gameHistoryLog = [];
+                saveGameHistory(); 
+                renderGameHistory();
+                showMessage("Game history cleared.");
+            }
+        });
+
+        function loadGameFromHistory(index) {
+            const gameData = gameHistoryLog[index];
+            if (!gameData || !gameData.initialGrid) {
+                showMessage("Error: Could not load game data from history.");
+                return;
+            }
+            stopGame(); // Ensures animationId is null and button is initially "Start"
+
+            cellSize = gameData.initialCellSize;
+            cellSizeSlider.value = cellSize; // This triggers the 'input' event listener
+                                           // which itself calls stopGame and resetGrid,
+                                           // both of which call setPausedButtonState.
+            cellSizeValueDisplay.textContent = `${cellSize}px`;
+            
+            // Set canvas dimensions based on loaded game's cell size and grid dimensions
+            // This needs to happen BEFORE createAndInitializeGrids if it relies on numCols/Rows
+            // And numCols/Rows need to be set from gameData first.
+            numCols = gameData.initialNumCols; // Set numCols from history
+            numRows = gameData.initialNumRows; // Set numRows from history
+            canvas.width = numCols * cellSize;
+            canvas.height = numRows * cellSize;
+            
+            // grid will be created by resetCurrentGameStats or createAndInitializeGrids
+            // then populated.
+            grid = JSON.parse(JSON.stringify(gameData.initialGrid)); // Deep copy the grid state
+            
+            resetCurrentGameStats(); // Reset runtime stats (gen count to 0, etc.)
+                                     // This also reinitializes birthGenerationGrid based on new numCols, numRows
+            
+            captureInitialState(); // The loaded state is now the new 'initial state' for a potential *next* save
+            
+            drawGrid(); // Draw the loaded historical grid
+            updateStatsDisplay(); 
+
+            // Explicitly ensure animationId is null and button state is paused.
+            animationId = null; 
+            setPausedButtonState(); // Final explicit call to set button to "Start" and enabled
+            showMessage(`Loaded game from ${gameData.timestamp}. Edit or Start.`);
+        }
+
+
+        function handleGameOver(reason) {
+            stopGame(); 
+            addGameToHistory(reason); 
+            const avgLifespanText = totalCellsDied > 0 ? (totalLifespanSum / totalCellsDied).toFixed(1) : 'N/A';
+            showMessage(`Game Over: ${reason}.<br>Survived ${generationCount} gens.<br>Born: ${totalCellsCreated}. Avg.Lifespan: ${avgLifespanText} gens.`);
+            setPausedButtonState(); // Game over means it's effectively paused
+            startButton.disabled = true; // But can't restart this specific instance from "Start"
+            stepButton.disabled = true;
+            skipToEndButton.disabled = true;
+            updateStatsDisplay(); 
+        }
+
+        function updateAndCheckGrid() {
+            if (!grid || !birthGenerationGrid || numCols === 0 || numRows === 0) return false; 
+
+            const prevGridSnapshot = JSON.parse(JSON.stringify(grid)); 
+            const nextGrid = new Array(numCols).fill(null).map(() => new Array(numRows).fill(0));
+            let liveCellsInNextGrid = 0;
+            
+            generationCount++;
+
+            for (let col = 0; col < numCols; col++) {
+                for (let row = 0; row < numRows; row++) {
+                    const neighbors = countNeighbors(col, row); 
+                    const currentState = grid[col][row];
+                    let nextState = currentState;
+
+                    if (currentState === 1) { 
+                        if (neighbors < 2 || neighbors > 3) {
+                            nextState = 0; 
+                            const birthGen = birthGenerationGrid[col][row];
+                            if (birthGen > 0) { // Only count lifespan for cells born in-game
+                                 const lifespan = generationCount - birthGen;
+                                 totalLifespanSum += lifespan;
+                                 totalCellsDied++;
+                            }
+                            birthGenerationGrid[col][row] = 0; 
+                        } // else stays alive, birthGen unchanged
+                    } else { 
+                        if (neighbors === 3) {
+                            nextState = 1; 
+                            totalCellsCreated++;
+                            birthGenerationGrid[col][row] = generationCount; 
+                        } // else stays dead
+                    }
+                    nextGrid[col][row] = nextState;
+                    if (nextState === 1) liveCellsInNextGrid++;
+                }
+            }
+            
+            updateStatsDisplay(); 
+
+            if (liveCellsInNextGrid === 0) {
+                grid = nextGrid; handleGameOver("All cells died"); return true;
+            }
+            if (areGridsIdentical(prevGridSnapshot, nextGrid)) {
+                grid = nextGrid; handleGameOver("Pattern stabilized"); return true;
+            }
+            grid = nextGrid; 
+            const currentGridString = JSON.stringify(grid); 
+            if (historyGrids.includes(currentGridString)) {
+                handleGameOver("Pattern repeating"); return true;
+            }
+            historyGrids.push(currentGridString);
+            if (historyGrids.length > HISTORY_LENGTH) historyGrids.shift(); 
+            return false; 
+        }
+
+        let lastUpdateTime = 0;
+        function gameLoop(timestamp) {
+            if (!animationId) return;
+            if (timestamp - lastUpdateTime >= gameSpeed) {
+                lastUpdateTime = timestamp;
+                if (updateAndCheckGrid()) return; // Game over handled
+                drawGrid();
+            }
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            if (animationId) return; // Already running
+            if (!grid || numCols === 0 || numRows === 0) {
+                // If grid is not set up, randomize it first.
+                // This also calls captureInitialState for the new random grid.
+                randomizeGrid(); 
+            }
+            // Ensure currentInitialGrid is set if we are starting from a manually prepared state
+            // or a loaded history state that hasn't been run yet.
+            if (!currentInitialGrid && grid) { 
+                captureInitialState();
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+            setRunningButtonState();
+            showMessage("Game Started!");
+        }
+
+        function stopGame() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            setPausedButtonState();
+            // Avoid "Game Paused" if a "Game Over" message is already showing
+            if (messageBox.style.display === 'none' || !messageText.textContent.startsWith("Game Over")) {
+                 if (grid) showMessage("Game Paused."); 
+            }
+            updateStatsDisplay(); 
+        }
+        
+        function stepOnce() {
+            if (animationId) { showMessage("Pause to step."); return; }
+            if (!grid || numCols === 0 || numRows === 0) {
+                randomizeGrid();
+            }
+            // Ensure initial state is captured if stepping from generation 0 of a new/loaded pattern
+            if (generationCount === 0 && !currentInitialGrid && grid) {
+                 captureInitialState();
+            }
+
+            if (!updateAndCheckGrid()) { // if not game over
+                 showMessage("Stepped Forward.");
+            }
+            drawGrid();
+        }
+
+        async function skipToEnd() {
+            if (animationId) stopGame(); 
+            if (!grid || numCols === 0 || numRows === 0) {
+                randomizeGrid();
+            }
+             // Ensure initial state is captured if skipping from generation 0
+            if (generationCount === 0 && !currentInitialGrid && grid) {
+                 captureInitialState();
+            }
+
+            showMessage("Skipping to end...");
+            setRunningButtonState(); 
+            skipToEndButton.disabled = true; 
+
+            let isGameOver = false;
+            let skippedGenerations = 0;
+            
+            await new Promise(resolve => setTimeout(resolve, 30)); 
+
+            for (let i = 0; i < MAX_SKIP_GENERATIONS; i++) {
+                isGameOver = updateAndCheckGrid(); 
+                if (isGameOver) break;
+                skippedGenerations++;
+                if (i % 200 === 0) { 
+                    drawGrid(); 
+                    await new Promise(resolve => setTimeout(resolve, 0)); 
+                }
+            }
+            
+            drawGrid(); 
+            updateStatsDisplay(); 
+
+            if (!isGameOver) {
+                const reasonForSkipEnd = `Max skip (${MAX_SKIP_GENERATIONS} gens)`;
+                addGameToHistory(reasonForSkipEnd); 
+                showMessage(`Skipped ${skippedGenerations} gens (max).<br>Pattern may be long-lived. Paused.`);
+                setPausedButtonState(); 
+            }
+            // If isGameOver, handleGameOver was called by updateAndCheckGrid
+        }
+
+        startButton.addEventListener('click', startGame);
+        stopButton.addEventListener('click', stopGame);
+        stepButton.addEventListener('click', stepOnce);
+        skipToEndButton.addEventListener('click', skipToEnd);
+        resetButton.addEventListener('click', () => { resetGrid(); showMessage("Grid Reset. Current game stats cleared."); });
+        randomizeButton.addEventListener('click', () => { randomizeGrid(); showMessage("Grid Randomized. Current game stats reset."); });
+
+        cellSizeSlider.addEventListener('input', (e) => {
+            cellSize = parseInt(e.target.value);
+            cellSizeValueDisplay.textContent = `${cellSize}px`;
+            if (!animationId) { // Only if game is paused
+                stopGame(); 
+                // When cell size changes on a paused grid, we should re-initialize the grid
+                // setupCanvas will be called by resetGrid to adjust dimensions.
+                resetGrid(); // This will use new cellSize for setupCanvas, then create new grids
+                             // and capture the new (empty) initial state.
+            }
+        });
+        speedSlider.addEventListener('input', (e) => { gameSpeed = parseInt(e.target.value); speedValueDisplay.textContent = `${gameSpeed}ms`; });
+        densitySlider.addEventListener('input', (e) => {
+            initialDensity = parseInt(e.target.value) / 100;
+            densityValueDisplay.textContent = `${e.target.value}%`;
+            if (!animationId) { // Only if game is paused
+                 stopGame(); 
+                 randomizeGrid(); // This will use new density and capture new initial state
+            }
+        });
+
+        function handleCellToggle(event, isTouchEvent = false) {
+            if (animationId) { showMessage("Pause to edit cells."); if(isTouchEvent) event.preventDefault(); return; }
+            if (!grid) return; // Should not happen if initialized
+
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (isTouchEvent) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+            // Check for valid rect dimensions to prevent NaN issues if canvas is not visible/sized
+            if (rect.width === 0 || rect.height === 0) return;
+
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
+            const col = Math.floor(x / cellSize);
+            const row = Math.floor(y / cellSize);
+
+            if (col >= 0 && col < numCols && row >= 0 && row < numRows) {
+                grid[col][row] = grid[col][row] ? 0 : 1;
+                resetCurrentGameStats(); // Editing resets current game's progression stats
+                captureInitialState(); // The new manual state is the initial state for a potential save
+                drawGrid();
+                updateStatsDisplay(); 
+                showMessage("Cell toggled. Current game stats reset.");
+            }
+            if(isTouchEvent) event.preventDefault();
+        }
+        canvas.addEventListener('click', (e) => handleCellToggle(e, false));
+        canvas.addEventListener('touchstart', (e) => handleCellToggle(e, true), { passive: false });
+
+        function setupCanvas() {
+            const container = canvas.parentElement;
+            let containerWidth = container.clientWidth;
+            if (containerWidth < 50) containerWidth = Math.max(window.innerWidth * 0.8, 300); // Min sensible width
+            
+            numCols = Math.max(1, Math.floor(containerWidth / cellSize));
+            canvas.width = numCols * cellSize;
+
+            const maxCanvasHeight = window.innerHeight * 0.50; 
+            let calculatedRows = Math.max(1, Math.floor((canvas.width * 0.60) / cellSize)); // Use canvas.width for aspect
+            numRows = Math.min(calculatedRows, Math.floor(maxCanvasHeight / cellSize));
+            if (numRows < 5 && maxCanvasHeight >= cellSize * 5) numRows = 5;
+            else if (numRows < 1) numRows = 1;
+            
+            canvas.height = numRows * cellSize;
+
+            // Final check to ensure canvas has some dimension if calculations result in zero
+            if (canvas.width === 0) canvas.width = cellSize * 10; // Default fallback
+            if (canvas.height === 0) canvas.height = cellSize * 10; // Default fallback
+            numCols = Math.max(1, Math.floor(canvas.width / cellSize));
+            numRows = Math.max(1, Math.floor(canvas.height / cellSize));
+        }
+
+        function initializeGame() {
+            cellSizeValueDisplay.textContent = `${cellSizeSlider.value}px`;
+            speedValueDisplay.textContent = `${speedSlider.value}ms`;
+            densityValueDisplay.textContent = `${densitySlider.value}%`;
+            
+            loadGameHistory(); 
+            randomizeGrid(); 
+        }
+
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                stopGame(); 
+                resetGrid(); // resetGrid calls setupCanvas and other necessary functions
+                showMessage("Resized. Grid & current stats reset.");
+            }, 250);
+        });
+
+        window.onload = initializeGame;
+    </script>
+</body>
+</html>
